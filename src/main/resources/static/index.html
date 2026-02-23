@@ -1,0 +1,1280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Health Monitor</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet" />
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --bg: #f7f5f2;
+            --surface: #ffffff;
+            --surface-alt: #f0ede9;
+            --border: #e5e0d8;
+            --border-strong: #d0c9be;
+            --text-primary: #1a1814;
+            --text-secondary: #6b6560;
+            --text-muted: #9b948c;
+            --accent: #2a6049;
+            --accent-light: #e8f2ee;
+            --healthy: #2a6049;
+            --healthy-bg: #e8f2ee;
+            --degraded: #92600a;
+            --degraded-bg: #fef3e2;
+            --down: #8b2020;
+            --down-bg: #fdeaea;
+            --paused: #5a5450;
+            --paused-bg: #f0ede9;
+            --shadow-sm: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+            --shadow-md: 0 4px 12px rgba(0,0,0,0.08), 0 2px 4px rgba(0,0,0,0.04);
+            --radius: 10px;
+            --radius-sm: 6px;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg);
+            color: var(--text-primary);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* HEADER */
+        header {
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            padding: 0 32px;
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: baseline;
+            gap: 10px;
+        }
+
+        .logo {
+            font-family: 'Instrument Serif', serif;
+            font-size: 22px;
+            color: var(--text-primary);
+            letter-spacing: -0.3px;
+        }
+
+        .logo span {
+            font-style: italic;
+            color: var(--accent);
+        }
+
+        .api-status {
+            display: flex;
+            align-items: center;
+            gap: 7px;
+            font-size: 12px;
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+
+        .status-dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: #ccc;
+            transition: background 0.3s;
+        }
+
+        .status-dot.online { background: var(--healthy); animation: pulse-green 2s infinite; }
+        .status-dot.offline { background: var(--down); }
+
+        @keyframes pulse-green {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        /* NAV */
+        nav {
+            display: flex;
+            gap: 4px;
+        }
+
+        .nav-btn {
+            padding: 6px 16px;
+            border-radius: var(--radius-sm);
+            border: none;
+            background: transparent;
+            font-family: 'Inter', sans-serif;
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+
+        .nav-btn:hover { background: var(--surface-alt); color: var(--text-primary); }
+        .nav-btn.active { background: var(--text-primary); color: #fff; }
+
+        /* LAYOUT */
+        .layout {
+            display: flex;
+            flex: 1;
+            gap: 0;
+        }
+
+        /* SIDEBAR */
+        aside {
+            width: 260px;
+            min-width: 260px;
+            border-right: 1px solid var(--border);
+            background: var(--surface);
+            padding: 24px 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+        }
+
+        .sidebar-section-label {
+            font-size: 10px;
+            font-weight: 600;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            padding: 0 8px;
+            margin-bottom: 6px;
+        }
+
+        .sidebar-nav-btn {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 9px 12px;
+            border-radius: var(--radius-sm);
+            border: none;
+            background: transparent;
+            font-family: 'Inter', sans-serif;
+            font-size: 13.5px;
+            font-weight: 500;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all 0.15s;
+            text-align: left;
+        }
+
+        .sidebar-nav-btn:hover { background: var(--surface-alt); color: var(--text-primary); }
+        .sidebar-nav-btn.active { background: var(--accent-light); color: var(--accent); font-weight: 600; }
+
+        .sidebar-icon { font-size: 16px; width: 20px; text-align: center; }
+
+        .sidebar-badge {
+            margin-left: auto;
+            background: var(--down-bg);
+            color: var(--down);
+            font-size: 11px;
+            font-weight: 600;
+            padding: 1px 7px;
+            border-radius: 20px;
+        }
+
+        /* SUMMARY STATS */
+        .summary-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+
+        .summary-card {
+            background: var(--surface-alt);
+            border-radius: var(--radius-sm);
+            padding: 12px;
+        }
+
+        .summary-val {
+            font-family: 'Instrument Serif', serif;
+            font-size: 24px;
+            color: var(--text-primary);
+            line-height: 1;
+        }
+
+        .summary-label {
+            font-size: 11px;
+            color: var(--text-muted);
+            margin-top: 4px;
+            font-weight: 500;
+        }
+
+        /* MAIN CONTENT */
+        main {
+            flex: 1;
+            padding: 28px 32px;
+            overflow-y: auto;
+        }
+
+        .page { display: none; }
+        .page.active { display: block; animation: fadeIn 0.2s ease; }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+
+        /* PAGE HEADER */
+        .page-header {
+            display: flex;
+            align-items: flex-end;
+            justify-content: space-between;
+            margin-bottom: 24px;
+        }
+
+        .page-title {
+            font-family: 'Instrument Serif', serif;
+            font-size: 28px;
+            color: var(--text-primary);
+            line-height: 1.1;
+        }
+
+        .page-subtitle {
+            font-size: 13px;
+            color: var(--text-muted);
+            margin-top: 4px;
+        }
+
+        /* ADD MONITOR BUTTON */
+        .btn-primary {
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            padding: 9px 18px;
+            background: var(--text-primary);
+            color: #fff;
+            border: none;
+            border-radius: var(--radius-sm);
+            font-family: 'Inter', sans-serif;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: opacity 0.15s;
+        }
+
+        .btn-primary:hover { opacity: 0.85; }
+
+        .btn-secondary {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 7px 14px;
+            background: var(--surface);
+            color: var(--text-secondary);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            font-family: 'Inter', sans-serif;
+            font-size: 12px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+
+        .btn-secondary:hover { background: var(--surface-alt); border-color: var(--border-strong); color: var(--text-primary); }
+
+        .btn-danger {
+            display: inline-flex;
+            align-items: center;
+            padding: 6px 12px;
+            background: transparent;
+            color: var(--down);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            font-family: 'Inter', sans-serif;
+            font-size: 12px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+
+        .btn-danger:hover { background: var(--down-bg); border-color: var(--down); }
+
+        /* MONITOR GRID */
+        .monitor-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 16px;
+        }
+
+        .monitor-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 20px;
+            box-shadow: var(--shadow-sm);
+            transition: box-shadow 0.15s, transform 0.15s;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .monitor-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 3px;
+            background: var(--border);
+            transition: background 0.3s;
+        }
+
+        .monitor-card.healthy::before { background: var(--healthy); }
+        .monitor-card.degraded::before { background: var(--degraded); }
+        .monitor-card.down::before { background: var(--down); }
+        .monitor-card.paused::before { background: var(--paused); }
+
+        .monitor-card:hover { box-shadow: var(--shadow-md); transform: translateY(-1px); }
+
+        .card-top {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            margin-bottom: 12px;
+        }
+
+        .card-name {
+            font-family: 'Instrument Serif', serif;
+            font-size: 17px;
+            color: var(--text-primary);
+            line-height: 1.2;
+        }
+
+        .health-badge {
+            font-size: 11px;
+            font-weight: 600;
+            padding: 3px 9px;
+            border-radius: 20px;
+            letter-spacing: 0.03em;
+            white-space: nowrap;
+        }
+
+        .badge-healthy { background: var(--healthy-bg); color: var(--healthy); }
+        .badge-degraded { background: var(--degraded-bg); color: var(--degraded); }
+        .badge-down { background: var(--down-bg); color: var(--down); }
+        .badge-paused { background: var(--paused-bg); color: var(--paused); }
+
+        .card-url {
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-bottom: 16px;
+            word-break: break-all;
+            font-family: 'Inter', monospace;
+        }
+
+        .card-stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 16px;
+            padding: 12px;
+            background: var(--surface-alt);
+            border-radius: var(--radius-sm);
+        }
+
+        .stat-item {}
+
+        .stat-val {
+            font-size: 18px;
+            font-family: 'Instrument Serif', serif;
+            color: var(--text-primary);
+            line-height: 1;
+        }
+
+        .stat-lbl {
+            font-size: 10.5px;
+            color: var(--text-muted);
+            margin-top: 3px;
+            font-weight: 500;
+        }
+
+        .card-actions {
+            display: flex;
+            gap: 7px;
+            flex-wrap: wrap;
+        }
+
+        /* MODAL */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.4);
+            z-index: 200;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(3px);
+        }
+
+        .modal-overlay.open { display: flex; animation: fadeIn 0.15s ease; }
+
+        .modal {
+            background: var(--surface);
+            border-radius: var(--radius);
+            padding: 28px;
+            width: 100%;
+            max-width: 460px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+        }
+
+        .modal-title {
+            font-family: 'Instrument Serif', serif;
+            font-size: 20px;
+            margin-bottom: 20px;
+            color: var(--text-primary);
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin-bottom: 6px;
+            letter-spacing: 0.02em;
+            text-transform: uppercase;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 10px 13px;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            font-family: 'Inter', sans-serif;
+            font-size: 14px;
+            color: var(--text-primary);
+            background: var(--surface);
+            transition: border-color 0.15s, box-shadow 0.15s;
+            outline: none;
+        }
+
+        .form-group input:focus {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(42,96,73,0.12);
+        }
+
+        .form-hint {
+            font-size: 11px;
+            color: var(--text-muted);
+            margin-top: 5px;
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+            margin-top: 24px;
+        }
+
+        /* CHECKS DRAWER */
+        .drawer-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.35);
+            z-index: 200;
+            backdrop-filter: blur(2px);
+        }
+
+        .drawer-overlay.open { display: block; animation: fadeIn 0.15s ease; }
+
+        .drawer {
+            position: fixed;
+            top: 0; right: 0; bottom: 0;
+            width: 480px;
+            background: var(--surface);
+            border-left: 1px solid var(--border);
+            padding: 28px;
+            overflow-y: auto;
+            box-shadow: -8px 0 40px rgba(0,0,0,0.1);
+            z-index: 201;
+            animation: slideIn 0.2s ease;
+        }
+
+        @keyframes slideIn { from { transform: translateX(40px); opacity: 0; } to { transform: none; opacity: 1; } }
+
+        .drawer-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 20px;
+        }
+
+        .drawer-title {
+            font-family: 'Instrument Serif', serif;
+            font-size: 20px;
+            color: var(--text-primary);
+        }
+
+        .drawer-subtitle {
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-top: 3px;
+        }
+
+        .close-btn {
+            background: none;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            width: 32px;
+            height: 32px;
+            cursor: pointer;
+            font-size: 16px;
+            color: var(--text-secondary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.15s;
+        }
+
+        .close-btn:hover { background: var(--surface-alt); }
+
+        /* CHECK TABLE */
+        .check-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .check-table th {
+            font-size: 10.5px;
+            font-weight: 600;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            text-align: left;
+            padding: 8px 0;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .check-table td {
+            padding: 10px 0;
+            font-size: 13px;
+            border-bottom: 1px solid var(--border);
+            color: var(--text-secondary);
+            vertical-align: middle;
+        }
+
+        .check-table tr:last-child td { border-bottom: none; }
+
+        .check-up { color: var(--healthy); font-weight: 600; font-size: 12px; }
+        .check-down { color: var(--down); font-weight: 600; font-size: 12px; }
+
+        .code-pill {
+            font-family: 'Inter', monospace;
+            font-size: 11.5px;
+            padding: 2px 7px;
+            border-radius: 4px;
+            background: var(--surface-alt);
+            border: 1px solid var(--border);
+            color: var(--text-secondary);
+        }
+
+        /* INCIDENTS PAGE */
+        .incidents-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .incident-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 18px 20px;
+            box-shadow: var(--shadow-sm);
+            display: grid;
+            grid-template-columns: 1fr auto;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .incident-card.open {
+            border-left: 3px solid var(--down);
+        }
+
+        .incident-card.resolved {
+            border-left: 3px solid var(--healthy);
+            opacity: 0.7;
+        }
+
+        .incident-monitor-name {
+            font-family: 'Instrument Serif', serif;
+            font-size: 16px;
+            color: var(--text-primary);
+            margin-bottom: 5px;
+        }
+
+        .incident-meta {
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+
+        .incident-meta-item {
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
+        .incident-meta-item span {
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+
+        .incident-status-badge {
+            font-size: 11px;
+            font-weight: 700;
+            padding: 4px 10px;
+            border-radius: 20px;
+            letter-spacing: 0.04em;
+        }
+
+        .badge-open { background: var(--down-bg); color: var(--down); }
+        .badge-resolved { background: var(--healthy-bg); color: var(--healthy); }
+
+        /* EMPTY STATE */
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--text-muted);
+        }
+
+        .empty-icon { font-size: 40px; margin-bottom: 12px; }
+
+        .empty-title {
+            font-family: 'Instrument Serif', serif;
+            font-size: 20px;
+            color: var(--text-secondary);
+            margin-bottom: 6px;
+        }
+
+        .empty-sub { font-size: 13px; }
+
+        /* TOAST */
+        .toast-container {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            z-index: 500;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .toast {
+            background: var(--text-primary);
+            color: #fff;
+            padding: 11px 16px;
+            border-radius: var(--radius-sm);
+            font-size: 13px;
+            font-weight: 500;
+            box-shadow: var(--shadow-md);
+            animation: toastIn 0.2s ease;
+            max-width: 300px;
+        }
+
+        .toast.success { background: var(--healthy); }
+        .toast.error { background: var(--down); }
+
+        @keyframes toastIn { from { transform: translateY(10px); opacity: 0; } to { transform: none; opacity: 1; } }
+
+        /* LOADING */
+        .loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 48px;
+            color: var(--text-muted);
+            font-size: 13px;
+            gap: 10px;
+        }
+
+        .spinner {
+            width: 18px;
+            height: 18px;
+            border: 2px solid var(--border);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 0.7s linear infinite;
+        }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .refresh-bar {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
+        .last-refresh { font-size: 11px; color: var(--text-muted); }
+
+        @media (max-width: 768px) {
+            aside { display: none; }
+            main { padding: 20px 16px; }
+            .drawer { width: 100%; }
+            header { padding: 0 16px; }
+            .monitor-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header>
+    <div class="header-left">
+        <span class="logo">Health <span>Monitor</span></span>
+    </div>
+    <div style="display:flex;align-items:center;gap:20px;">
+        <div class="api-status">
+            <div class="status-dot" id="apiDot"></div>
+            <span id="apiStatusText">Connecting...</span>
+        </div>
+        <nav>
+            <button class="nav-btn active" onclick="showPage('monitors', this)">Monitors</button>
+            <button class="nav-btn" onclick="showPage('incidents', this)">Incidents</button>
+        </nav>
+    </div>
+</header>
+
+<div class="layout">
+
+    <!-- SIDEBAR -->
+    <aside>
+        <div>
+            <div class="sidebar-section-label">Navigation</div>
+            <button class="sidebar-nav-btn active" id="sb-monitors" onclick="showPage('monitors', null, 'sb-monitors')">
+                <span class="sidebar-icon">⬡</span>
+                Monitors
+            </button>
+            <button class="sidebar-nav-btn" id="sb-incidents" onclick="showPage('incidents', null, 'sb-incidents')">
+                <span class="sidebar-icon">⚡</span>
+                Incidents
+                <span class="sidebar-badge" id="openIncidentCount" style="display:none">0</span>
+            </button>
+        </div>
+
+        <div>
+            <div class="sidebar-section-label">Overview</div>
+            <div class="summary-grid">
+                <div class="summary-card">
+                    <div class="summary-val" id="totalMonitors">—</div>
+                    <div class="summary-label">Monitors</div>
+                </div>
+                <div class="summary-card">
+                    <div class="summary-val" id="healthyCount">—</div>
+                    <div class="summary-label">Healthy</div>
+                </div>
+                <div class="summary-card">
+                    <div class="summary-val" id="downCount" style="color:var(--down)">—</div>
+                    <div class="summary-label">Down</div>
+                </div>
+                <div class="summary-card">
+                    <div class="summary-val" id="openCount" style="color:var(--degraded)">—</div>
+                    <div class="summary-label">Incidents</div>
+                </div>
+            </div>
+        </div>
+
+        <div style="margin-top:auto;">
+            <div class="last-refresh" id="lastRefresh"></div>
+            <button class="btn-secondary" style="width:100%;justify-content:center;margin-top:10px" onclick="refreshAll()">
+                ↻ Refresh Now
+            </button>
+        </div>
+    </aside>
+
+    <!-- MAIN -->
+    <main>
+
+        <!-- MONITORS PAGE -->
+        <div class="page active" id="page-monitors">
+            <div class="page-header">
+                <div>
+                    <div class="page-title">Monitors</div>
+                    <div class="page-subtitle">Registered API endpoints being watched</div>
+                </div>
+                <button class="btn-primary" onclick="openAddModal()">+ Add Monitor</button>
+            </div>
+
+            <div id="monitorsList">
+                <div class="loading"><div class="spinner"></div> Loading monitors...</div>
+            </div>
+        </div>
+
+        <!-- INCIDENTS PAGE -->
+        <div class="page" id="page-incidents">
+            <div class="page-header">
+                <div>
+                    <div class="page-title">Incidents</div>
+                    <div class="page-subtitle">Open and recent downtime events</div>
+                </div>
+                <div class="refresh-bar">
+                    <div class="spinner" id="incidentSpinner" style="display:none"></div>
+                </div>
+            </div>
+
+            <div id="incidentsList">
+                <div class="loading"><div class="spinner"></div> Loading incidents...</div>
+            </div>
+        </div>
+
+    </main>
+</div>
+
+<!-- ADD MONITOR MODAL -->
+<div class="modal-overlay" id="addModal">
+    <div class="modal">
+        <div class="modal-title">Register New Monitor</div>
+        <div class="form-group">
+            <label>Name</label>
+            <input type="text" id="inp-name" placeholder="e.g. GitHub API" />
+        </div>
+        <div class="form-group">
+            <label>URL</label>
+            <input type="text" id="inp-url" placeholder="https://api.example.com/health" />
+            <div class="form-hint">Must start with http:// or https://</div>
+        </div>
+        <div class="form-group">
+            <label>Check Interval (seconds)</label>
+            <input type="number" id="inp-interval" placeholder="60" value="60" min="10" />
+            <div class="form-hint">How often to ping this endpoint</div>
+        </div>
+        <div class="modal-actions">
+            <button class="btn-secondary" onclick="closeAddModal()">Cancel</button>
+            <button class="btn-primary" onclick="submitMonitor()">Add Monitor</button>
+        </div>
+    </div>
+</div>
+
+<!-- CHECKS DRAWER -->
+<div class="drawer-overlay" id="drawerOverlay" onclick="closeDrawer()"></div>
+<div class="drawer" id="checksDrawer">
+    <div class="drawer-header">
+        <div>
+            <div class="drawer-title" id="drawerTitle">Check History</div>
+            <div class="drawer-subtitle" id="drawerSubtitle"></div>
+        </div>
+        <button class="close-btn" onclick="closeDrawer()">✕</button>
+    </div>
+    <div id="drawerContent">
+        <div class="loading"><div class="spinner"></div> Loading...</div>
+    </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast-container" id="toastContainer"></div>
+
+<script>
+    // ── STATE ──
+    let monitors = [];
+    let incidents = [];
+    let monitorStats = {}; // cache stats by id
+    let currentPage = 'monitors';
+
+    // ── PAGE SWITCHING ──
+    function showPage(name, headerBtn, sidebarId) {
+        currentPage = name;
+        document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+        document.getElementById('page-' + name).classList.add('active');
+
+        // header nav
+        document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+        if (headerBtn) headerBtn.classList.add('active');
+        else {
+            document.querySelectorAll('.nav-btn').forEach(b => {
+                if (b.textContent.toLowerCase().includes(name)) b.classList.add('active');
+            });
+        }
+
+        // sidebar nav
+        document.querySelectorAll('.sidebar-nav-btn').forEach(b => b.classList.remove('active'));
+        const sbId = sidebarId || 'sb-' + name;
+        const sbEl = document.getElementById(sbId);
+        if (sbEl) sbEl.classList.add('active');
+
+        if (name === 'incidents') loadIncidents();
+    }
+
+    // ── API HELPERS ──
+    async function api(path, options = {}) {
+        const res = await fetch(path, options);
+        if (!res.ok) {
+            const err = await res.json().catch(() => ({ message: res.statusText }));
+            throw new Error(err.message || res.statusText);
+        }
+        if (res.status === 204) return null;
+        return res.json();
+    }
+
+    // ── MONITORS ──
+    async function loadMonitors() {
+        try {
+            monitors = await api('/api/monitors');
+            renderMonitors();
+            updateSidebar();
+            updateApiStatus(true);
+        } catch (e) {
+            updateApiStatus(false);
+            document.getElementById('monitorsList').innerHTML = `
+          <div class="empty-state">
+            <div class="empty-icon">⚠️</div>
+            <div class="empty-title">Could not load monitors</div>
+            <div class="empty-sub">${e.message}</div>
+          </div>`;
+        }
+    }
+
+    async function renderMonitors() {
+        const el = document.getElementById('monitorsList');
+        if (!monitors.length) {
+            el.innerHTML = `
+          <div class="empty-state">
+            <div class="empty-icon">🔭</div>
+            <div class="empty-title">No monitors yet</div>
+            <div class="empty-sub">Add your first API endpoint to start monitoring</div>
+          </div>`;
+            return;
+        }
+
+        // Load stats for all monitors concurrently
+        await Promise.allSettled(monitors.map(async m => {
+            try { monitorStats[m.id] = await api('/api/monitors/' + m.id + '/stats'); }
+            catch(_) {}
+        }));
+
+        el.innerHTML = '';
+        const grid = document.createElement('div');
+        grid.className = 'monitor-grid';
+
+        monitors.forEach(m => {
+            const stats = monitorStats[m.id];
+            const hs = (m.healthStatus || 'HEALTHY').toLowerCase();
+            const st = (m.status || 'ACTIVE').toLowerCase();
+            const cardClass = st === 'paused' ? 'paused' : hs;
+
+            const uptime = stats ? stats.uptimePercentage.toFixed(1) : '—';
+            const avgMs = stats ? (stats.averageResponseTimeMs > 0 ? stats.averageResponseTimeMs.toFixed(0) + 'ms' : '—') : '—';
+            const lastChecked = stats ? formatRelative(stats.lastCheckedAt) : '—';
+
+            const card = document.createElement('div');
+            card.className = `monitor-card ${cardClass}`;
+            card.innerHTML = `
+          <div class="card-top">
+            <div class="card-name">${esc(m.name)}</div>
+            ${st === 'paused'
+                ? `<span class="health-badge badge-paused">PAUSED</span>`
+                : `<span class="health-badge badge-${hs}">${m.healthStatus}</span>`}
+          </div>
+          <div class="card-url">${esc(m.url)}</div>
+          <div class="card-stats">
+            <div class="stat-item">
+              <div class="stat-val">${uptime}%</div>
+              <div class="stat-lbl">Uptime (24h)</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-val">${avgMs}</div>
+              <div class="stat-lbl">Avg Response</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-val">${stats ? stats.totalChecks : '—'}</div>
+              <div class="stat-lbl">Checks (24h)</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-val">${lastChecked}</div>
+              <div class="stat-lbl">Last Checked</div>
+            </div>
+          </div>
+          <div class="card-actions">
+            <button class="btn-secondary" onclick="viewChecks(${m.id}, '${esc(m.name)}')">📋 View Checks</button>
+            ${st === 'paused'
+                ? `<button class="btn-secondary" onclick="resumeMonitor(${m.id})">▶ Resume</button>`
+                : `<button class="btn-secondary" onclick="pauseMonitor(${m.id})">⏸ Pause</button>`}
+            <button class="btn-danger" onclick="deleteMonitor(${m.id}, '${esc(m.name)}')">Delete</button>
+          </div>`;
+            grid.appendChild(card);
+        });
+
+        el.appendChild(grid);
+    }
+
+    function updateSidebar() {
+        const total = monitors.length;
+        const healthy = monitors.filter(m => m.healthStatus === 'HEALTHY' && m.status === 'ACTIVE').length;
+        const down = monitors.filter(m => m.healthStatus === 'DOWN').length;
+
+        document.getElementById('totalMonitors').textContent = total;
+        document.getElementById('healthyCount').textContent = healthy;
+        document.getElementById('downCount').textContent = down;
+        document.getElementById('lastRefresh').textContent = 'Updated ' + new Date().toLocaleTimeString();
+    }
+
+    // ── INCIDENTS ──
+    async function loadIncidents() {
+        document.getElementById('incidentSpinner').style.display = 'block';
+        try {
+            incidents = await api('/api/incidents/open');
+            // Also grab all incidents per monitor for context
+            renderIncidents();
+            updateOpenIncidentBadge(incidents.length);
+        } catch (e) {
+            document.getElementById('incidentsList').innerHTML = `
+          <div class="empty-state">
+            <div class="empty-icon">⚠️</div>
+            <div class="empty-title">Could not load incidents</div>
+            <div class="empty-sub">${e.message}</div>
+          </div>`;
+        } finally {
+            document.getElementById('incidentSpinner').style.display = 'none';
+        }
+    }
+
+    function renderIncidents() {
+        const el = document.getElementById('incidentsList');
+        if (!incidents.length) {
+            el.innerHTML = `
+          <div class="empty-state">
+            <div class="empty-icon">✅</div>
+            <div class="empty-title">All systems operational</div>
+            <div class="empty-sub">No open incidents at this time</div>
+          </div>`;
+            return;
+        }
+
+        const list = document.createElement('div');
+        list.className = 'incidents-list';
+
+        incidents.forEach(inc => {
+            const monitor = monitors.find(m => m.id === inc.monitorId);
+            const monitorName = monitor ? monitor.name : 'Monitor #' + inc.monitorId;
+            const startedAt = formatDateTime(inc.startedAt);
+            const duration = getDuration(inc.startedAt, inc.resolvedAt);
+
+            const card = document.createElement('div');
+            card.className = 'incident-card open';
+            card.innerHTML = `
+          <div>
+            <div class="incident-monitor-name">${esc(monitorName)}</div>
+            <div class="incident-meta">
+              <div class="incident-meta-item">Started: <span>${startedAt}</span></div>
+              <div class="incident-meta-item">Duration: <span>${duration}</span></div>
+              <div class="incident-meta-item">Monitor URL: <span style="font-family:monospace;font-size:11px">${monitor ? esc(monitor.url) : '—'}</span></div>
+            </div>
+          </div>
+          <span class="incident-status-badge badge-open">OPEN</span>`;
+            list.appendChild(card);
+        });
+
+        el.innerHTML = '';
+        el.appendChild(list);
+    }
+
+    function updateOpenIncidentBadge(count) {
+        document.getElementById('openCount').textContent = count;
+        const badge = document.getElementById('openIncidentCount');
+        if (count > 0) {
+            badge.textContent = count;
+            badge.style.display = 'inline';
+        } else {
+            badge.style.display = 'none';
+        }
+    }
+
+    // ── CHECKS DRAWER ──────────────────────────────────────────────────────────
+    async function viewChecks(monitorId, monitorName) {
+        document.getElementById('drawerTitle').textContent = monitorName;
+        document.getElementById('drawerSubtitle').textContent = 'Last 50 check results';
+        document.getElementById('drawerContent').innerHTML = '<div class="loading"><div class="spinner"></div> Loading...</div>';
+        document.getElementById('drawerOverlay').classList.add('open');
+        document.getElementById('checksDrawer').style.display = 'block';
+
+        try {
+            const checks = await api('/api/monitors/' + monitorId + '/checks');
+            renderChecks(checks);
+        } catch (e) {
+            document.getElementById('drawerContent').innerHTML = `<p style="color:var(--down);font-size:13px">Failed to load: ${e.message}</p>`;
+        }
+    }
+
+    function renderChecks(checks) {
+        const el = document.getElementById('drawerContent');
+        if (!checks.length) {
+            el.innerHTML = '<div class="empty-state"><div class="empty-title">No checks yet</div><div class="empty-sub">Wait for the scheduler to run (every 60s)</div></div>';
+            return;
+        }
+
+        el.innerHTML = `
+        <table class="check-table">
+          <thead>
+            <tr>
+              <th>Status</th>
+              <th>Code</th>
+              <th>Response</th>
+              <th>Time</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${checks.map(c => `
+              <tr>
+                <td class="${c.isUp ? 'check-up' : 'check-down'}">${c.isUp ? '↑ UP' : '↓ DOWN'}</td>
+                <td>${c.statusCode ? `<span class="code-pill">${c.statusCode}</span>` : '<span style="color:var(--text-muted)">—</span>'}</td>
+                <td>${c.responseTimeMs != null ? c.responseTimeMs + 'ms' : '—'}</td>
+                <td style="font-size:11.5px;color:var(--text-muted)">${formatDateTime(c.checkedAt)}</td>
+              </tr>`).join('')}
+          </tbody>
+        </table>`;
+    }
+
+    function closeDrawer() {
+        document.getElementById('drawerOverlay').classList.remove('open');
+        document.getElementById('checksDrawer').style.display = 'none';
+    }
+
+    // ── MONITOR ACTIONS ────────────────────────────────────────────────────────
+    function openAddModal() {
+        document.getElementById('addModal').classList.add('open');
+        document.getElementById('inp-name').focus();
+    }
+
+    function closeAddModal() {
+        document.getElementById('addModal').classList.remove('open');
+        document.getElementById('inp-name').value = '';
+        document.getElementById('inp-url').value = '';
+        document.getElementById('inp-interval').value = '60';
+    }
+
+    async function submitMonitor() {
+        const name = document.getElementById('inp-name').value.trim();
+        const url = document.getElementById('inp-url').value.trim();
+        const interval = parseInt(document.getElementById('inp-interval').value) || 60;
+
+        if (!name) { toast('Name is required', 'error'); return; }
+        if (!url) { toast('URL is required', 'error'); return; }
+        if (!url.startsWith('http')) { toast('URL must start with http or https', 'error'); return; }
+
+        try {
+            await api('/api/monitors', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name, url, checkIntervalSeconds: interval })
+            });
+            closeAddModal();
+            toast('Monitor added successfully', 'success');
+            await loadMonitors();
+        } catch (e) {
+            toast('Failed: ' + e.message, 'error');
+        }
+    }
+
+    async function pauseMonitor(id) {
+        try {
+            await api('/api/monitors/' + id + '/pause', { method: 'POST' });
+            toast('Monitor paused', 'success');
+            await loadMonitors();
+        } catch (e) {
+            toast('Failed: ' + e.message, 'error');
+        }
+    }
+
+    async function resumeMonitor(id) {
+        try {
+            await api('/api/monitors/' + id + '/resume', { method: 'POST' });
+            toast('Monitor resumed', 'success');
+            await loadMonitors();
+        } catch (e) {
+            toast('Failed: ' + e.message, 'error');
+        }
+    }
+
+    async function deleteMonitor(id, name) {
+        if (!confirm(`Delete monitor "${name}"? This cannot be undone.`)) return;
+        try {
+            await api('/api/monitors/' + id, { method: 'DELETE' });
+            toast('Monitor deleted', 'success');
+            await loadMonitors();
+        } catch (e) {
+            toast('Failed: ' + e.message, 'error');
+        }
+    }
+
+    // ── UTILS ──
+    function esc(s) {
+        return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    function formatDateTime(dt) {
+        if (!dt) return '—';
+        return new Date(dt).toLocaleString('en-GB', { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit', second:'2-digit' });
+    }
+
+    function formatRelative(dtStr) {
+        if (!dtStr || dtStr === 'Never') return 'Never';
+        const dt = new Date(dtStr.replace(' ', 'T'));
+        const diff = Math.floor((Date.now() - dt) / 1000);
+        if (diff < 5) return 'just now';
+        if (diff < 60) return diff + 's ago';
+        if (diff < 3600) return Math.floor(diff/60) + 'm ago';
+        return Math.floor(diff/3600) + 'h ago';
+    }
+
+    function getDuration(start, end) {
+        const from = new Date(start);
+        const to = end ? new Date(end) : new Date();
+        const secs = Math.floor((to - from) / 1000);
+        if (secs < 60) return secs + 's';
+        if (secs < 3600) return Math.floor(secs/60) + 'm ' + (secs%60) + 's';
+        return Math.floor(secs/3600) + 'h ' + Math.floor((secs%3600)/60) + 'm';
+    }
+
+    function updateApiStatus(online) {
+        const dot = document.getElementById('apiDot');
+        const txt = document.getElementById('apiStatusText');
+        dot.className = 'status-dot ' + (online ? 'online' : 'offline');
+        txt.textContent = online ? 'API Online' : 'API Offline';
+    }
+
+    function toast(msg, type = '') {
+        const el = document.createElement('div');
+        el.className = 'toast ' + type;
+        el.textContent = msg;
+        document.getElementById('toastContainer').appendChild(el);
+        setTimeout(() => el.remove(), 3500);
+    }
+
+    async function refreshAll() {
+        await loadMonitors();
+        if (currentPage === 'incidents') await loadIncidents();
+        toast('Refreshed');
+    }
+
+    // ── KEYBOARD SHORTCUT ──
+    document.addEventListener('keydown', e => {
+        if (e.key === 'Escape') { closeAddModal(); closeDrawer(); }
+    });
+
+    // Allow clicking modal overlay to close
+    document.getElementById('addModal').addEventListener('click', function(e) {
+        if (e.target === this) closeAddModal();
+    });
+
+    // ── INIT & AUTO-REFRESH ───
+    loadMonitors();
+
+    // Auto-refresh every 60 seconds
+    setInterval(async () => {
+        await loadMonitors();
+        if (currentPage === 'incidents') await loadIncidents();
+    }, 60000);
+</script>
+</body>
+</html>

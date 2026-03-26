@@ -1,6 +1,6 @@
 FROM eclipse-temurin:21-jdk-alpine AS build
 WORKDIR /app
-COPY . .
+COPY src/main/java/com/bhavesh/healthmonitor .
 RUN chmod +x mvnw && ./mvnw clean package -DskipTests
 
 FROM eclipse-temurin:21-jre-alpine

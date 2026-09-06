@@ -1,5 +1,5 @@
 # api-health-monitor
-built a system that watches over multiple APIs, checks if they're alive, tracks their response times, and alerts when something goes wrong.
+Monitors HTTP endpoints, records response times and availability, and tracks incidents when services fail.
 
 
 # API Health Monitor

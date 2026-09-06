@@ -48,7 +48,4 @@ Then run the app and visit `http://localhost:8080`
 | GET | /api/monitors/{id}/stats | 24h uptime statistics |
 | GET | /api/incidents/open | All open incidents |
 
-## Deployment
 
-Deployed on Railway with Supabase PostgreSQL.
-Environment variables set via Railway's Variables tab -  no credentials in code
